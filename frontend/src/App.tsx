@@ -7,6 +7,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Interviews from './pages/Interviews'
 import Transcripts from './pages/Transcripts'
+import Graph from './pages/Graph'
 import Journal from './pages/Journal'
 import About from './pages/About'
 
@@ -24,6 +25,7 @@ export const useAuth = () => useContext(Ctx)
 const TABS = [
   { to: '/', label: 'Дашборд', end: true },
   { to: '/interviews', label: 'Интервью' },
+  { to: '/graph', label: 'Связи' },
   { to: '/upload', label: 'Загрузка' },
   { to: '/journal', label: 'Журнал' },
   { to: '/about', label: 'О сервисе' },
@@ -52,7 +54,7 @@ function Shell() {
         <div className="sep" />
         <div>
           <div className="ph-title">{health?.app_title || 'ИИ-помощник'}</div>
-          <div className="ph-sub">{health?.app_subtitle || ''}</div>
+          {health?.app_subtitle && <div className="ph-sub">{health.app_subtitle}</div>}
         </div>
         <div className="ph-user">
           <div className="name">{user.full_name || user.username}</div>
@@ -98,6 +100,7 @@ export default function App() {
         <Route element={<Shell />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/interviews" element={<Interviews />} />
+          <Route path="/graph" element={<Graph />} />
           <Route path="/upload" element={<Transcripts />} />
           <Route path="/journal" element={<Journal />} />
           <Route path="/about" element={<About />} />

@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import io
-from collections import Counter, defaultdict
+import json
+import time
+from collections import Counter
 from itertools import combinations
 from pathlib import Path
 
@@ -16,7 +18,7 @@ from ..config import settings
 from ..db import get_db
 from ..domain.exit_interview import pipeline
 from ..llm import client as llm_client
-from ..models import Interview, User
+from ..models import Insight, Interview, User
 from .deps import audit, get_current_user, timed
 
 router = APIRouter(prefix="/interviews", tags=["interviews"])
@@ -40,6 +42,7 @@ def _row(i: Interview) -> dict:
     return {
         "id": i.id, "filename": i.filename, "chars": i.chars, "status": i.status, "error": i.error,
         "exit_reason": i.exit_reason, "risk_zone": i.risk_zone, "top_problem": i.top_problem,
+        "department": i.department or "", "manager": i.manager or "",
         "engine": i.engine, "duration_ms": i.duration_ms,
         "summary": p.get("summary", ""), "pains": len(p.get("pain_points", [])),
         "created_at": i.created_at.isoformat() if i.created_at else None,
@@ -82,6 +85,7 @@ def _apply(rec: Interview, result: dict, ms: int) -> None:
     rec.analysis = {k: result[k] for k in ("sentiment", "verification", "utterances", "steps", "notes")}
     rec.exit_reason, rec.risk_zone = p.get("exit_reason"), p.get("risk_zone")
     rec.top_problem, rec.engine = p.get("top_problem"), result["engine"]
+    rec.department, rec.manager = (p.get("department") or None), (p.get("manager") or None)
     rec.duration_ms, rec.status, rec.error = ms, "done", None
 
 
@@ -125,7 +129,7 @@ def analyze_text(body: TextIn, db: Session = Depends(get_db), user: User = Depen
 
 
 @router.get("")
-def list_interviews(q: str = "", reason: str = "", risk: str = "",
+def list_interviews(q: str = "", reason: str = "", risk: str = "", department: str = "", manager: str = "",
                     limit: int = Query(50, ge=1, le=500), offset: int = Query(0, ge=0),
                     db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     query = db.query(Interview)
@@ -136,6 +140,10 @@ def list_interviews(q: str = "", reason: str = "", risk: str = "",
         query = query.filter(Interview.exit_reason == reason)
     if risk:
         query = query.filter(Interview.risk_zone == risk)
+    if department:
+        query = query.filter(Interview.department == department)
+    if manager:
+        query = query.filter(Interview.manager == manager)
     total = query.count()
     rows = query.order_by(Interview.id.desc()).offset(offset).limit(limit).all()
     return {"items": [_row(r) for r in rows], "total": total}
@@ -199,6 +207,145 @@ def dashboard(db: Session = Depends(get_db), user: User = Depends(get_current_us
         "avg_duration_ms": int(sum(durations) / len(durations)) if durations else 0,
         "manual_minutes": settings.baseline_manual_minutes,
     }
+
+
+
+@router.get("/graph")
+def graph(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Клубок связей: интервью ↔ отдел, руководитель, причина, проблема.
+
+    Узлы пяти типов, рёбра только через интервью: так видно, из какого отдела
+    и по какой причине уходят, и какие проблемы тянутся за одним руководителем."""
+    rows = db.query(Interview).filter(Interview.status == "done").all()
+    nodes: dict[str, dict] = {}
+    edges: Counter = Counter()
+
+    def node(kind: str, name: str) -> str:
+        key = f"{kind}:{name}"
+        if key not in nodes:
+            nodes[key] = {"id": key, "kind": kind, "name": name, "count": 0}
+        nodes[key]["count"] += 1
+        return key
+
+    for r in rows:
+        p = r.passport or {}
+        iv = node("interview", r.filename)
+        nodes[iv].update({"risk": r.risk_zone, "summary": p.get("summary", ""), "interview_id": r.id})
+        links = [node("reason", p.get("exit_reason") or "другое")]
+        if r.department:
+            links.append(node("department", r.department))
+        if r.manager:
+            links.append(node("manager", r.manager))
+        for pp in p.get("pain_points", []):
+            links.append(node("problem", pp.get("category") or "другое"))
+        for k in dict.fromkeys(links):
+            edges[(iv, k)] += 1
+    return {
+        "nodes": list(nodes.values()),
+        "edges": [{"source": a, "target": b, "count": c} for (a, b), c in edges.items()],
+        "kinds": {"interview": "интервью", "department": "отдел", "manager": "руководитель",
+                  "reason": "причина ухода", "problem": "проблема"},
+    }
+
+
+def _insight_context(db: Session) -> tuple[str, int]:
+    """Сводка по всем паспортам — то, что видит модель. Только агрегаты и цитаты."""
+    rows = db.query(Interview).filter(Interview.status == "done").all()
+    if not rows:
+        return "", 0
+    reasons, pains, depts, mgrs, risks = Counter(), Counter(), Counter(), Counter(), Counter()
+    dept_reason, mgr_reason = Counter(), Counter()
+    quotes = []
+    for r in rows:
+        p = r.passport or {}
+        reasons[p.get("exit_reason") or "другое"] += 1
+        risks[p.get("risk_zone") or "Medium"] += 1
+        if r.department:
+            depts[r.department] += 1
+            dept_reason[(r.department, p.get("exit_reason") or "другое")] += 1
+        if r.manager:
+            mgrs[r.manager] += 1
+            mgr_reason[(r.manager, p.get("exit_reason") or "другое")] += 1
+        for pp in p.get("pain_points", []):
+            pains[pp.get("category") or "другое"] += 1
+            if pp.get("quotes") and len(quotes) < 12:
+                quotes.append(f"[{pp.get('category')}] «{pp['quotes'][0]}»")
+    lines = [f"Интервью всего: {len(rows)}",
+             "Причины ухода: " + ", ".join(f"{k} — {v}" for k, v in reasons.most_common()),
+             "Системные проблемы (в скольких интервью): " + ", ".join(f"{k} — {v}" for k, v in pains.most_common()),
+             "Риск для команды: " + ", ".join(f"{k} — {v}" for k, v in risks.most_common())]
+    if depts:
+        lines.append("Отделы: " + ", ".join(f"{k} — {v}" for k, v in depts.most_common()))
+        lines.append("Отдел и причина: " + ", ".join(f"{d} / {r} — {v}" for (d, r), v in dept_reason.most_common(8)))
+    if mgrs:
+        lines.append("Руководители: " + ", ".join(f"{k} — {v}" for k, v in mgrs.most_common()))
+        lines.append("Руководитель и причина: " + ", ".join(f"{m} / {r} — {v}" for (m, r), v in mgr_reason.most_common(8)))
+    lines.append("Характерные цитаты:\n" + "\n".join(quotes))
+    return "\n".join(lines), len(rows)
+
+
+def _insight_payload(i: Insight | None) -> dict:
+    if i is None:
+        return {"ready": False}
+    return {"ready": True, "interviews_count": i.interviews_count, "engine": i.engine,
+            "duration_ms": i.duration_ms, "created_at": i.created_at.isoformat() if i.created_at else None,
+            **(i.payload or {})}
+
+
+def _build_insight(db: Session, user: User, model: str | None) -> Insight:
+    from ..domain.exit_interview.pipeline import _extract_json, load_prompt
+
+    context, n = _insight_context(db)
+    if not n:
+        raise HTTPException(status_code=400, detail="Нет разобранных интервью — вывод строить не из чего")
+    system = load_prompt("insight_system")
+    engine = "fallback"
+    payload: dict | None = None
+    t0 = time.perf_counter()
+    if llm_client.llm_available():
+        try:
+            raw = llm_client.chat([{"role": "system", "content": system},
+                                   {"role": "user", "content": "Сводка по интервью:\n\n" + context +
+                                    "\n\nВерни вывод для руководителя в формате JSON."}],
+                                  temperature=0.2, max_tokens=2500, model=model, json_mode=True)
+            data = _extract_json(raw)
+            payload = {
+                "headline": str(data.get("headline") or ""),
+                "summary": str(data.get("summary") or ""),
+                "signals": [str(x) for x in (data.get("signals") or [])][:5],
+                "recommendations": [
+                    {"action": str(r.get("action") or ""), "owner": str(r.get("owner") or ""),
+                     "effect": str(r.get("effect") or "")}
+                    for r in (data.get("recommendations") or []) if isinstance(r, dict)][:5],
+            }
+            engine = f"llm:{model or settings.llm_model}"
+        except Exception as e:
+            payload = None
+            engine = f"fallback ({type(e).__name__})"
+    if payload is None:
+        dash = dashboard(db, user)
+        payload = {"headline": f"Главная проблема: {dash['top_problem'] or 'не выделена'}",
+                   "summary": f"Разобрано {n} интервью. Модель недоступна, вывод собран из агрегатов.",
+                   "signals": [], "recommendations": [{"action": s, "owner": "HR", "effect": ""} for s in dash["top_suggestions"]]}
+    ins = Insight(interviews_count=n, engine=engine, payload=payload,
+                  duration_ms=int((time.perf_counter() - t0) * 1000))
+    db.add(ins)
+    db.commit()
+    audit(db, user, "insight_build", {"interviews": n, "engine": engine}, duration_ms=ins.duration_ms)
+    return ins
+
+
+@router.get("/insight")
+def insight(refresh: bool = False, model: str = "", db: Session = Depends(get_db),
+            user: User = Depends(get_current_user)):
+    """Вывод ИИ для дашборда. Пересобирается, если добавились интервью или по кнопке."""
+    n = db.query(func.count(Interview.id)).filter(Interview.status == "done").scalar() or 0
+    last = db.query(Insight).order_by(Insight.id.desc()).first()
+    if n == 0:
+        return {"ready": False}
+    if refresh or last is None or last.interviews_count != n:
+        last = _build_insight(db, user, model or None)
+    return _insight_payload(last)
 
 
 @router.get("/{interview_id}")

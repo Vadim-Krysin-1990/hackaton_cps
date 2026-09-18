@@ -196,6 +196,8 @@ export interface BestPractice {
 }
 
 export interface Passport {
+  department?: string
+  manager?: string
   exit_reason: string
   exit_reason_quote: string
   says: string
@@ -257,6 +259,8 @@ export interface InterviewItem {
   exit_reason: string | null
   risk_zone: string | null
   top_problem: string | null
+  department: string
+  manager: string
   engine: string
   duration_ms: number
   summary: string
@@ -290,4 +294,32 @@ export interface Dashboard {
   verification: { checked: number; accepted: number; rejected: number }
   avg_duration_ms: number
   manual_minutes: number
+}
+
+export interface GraphNode {
+  id: string
+  kind: 'interview' | 'department' | 'manager' | 'reason' | 'problem' | string
+  name: string
+  count: number
+  risk?: string | null
+  summary?: string
+  interview_id?: number
+}
+
+export interface GraphData {
+  nodes: GraphNode[]
+  edges: { source: string; target: string; count: number }[]
+  kinds: Record<string, string>
+}
+
+export interface Insight {
+  ready: boolean
+  interviews_count: number
+  engine: string
+  duration_ms: number
+  created_at: string | null
+  headline: string
+  summary: string
+  signals: string[]
+  recommendations: { action: string; owner: string; effect: string }[]
 }

@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 
-export function Kpi({ label, value, sub, accent }: {
-  label: string; value: ReactNode; sub?: ReactNode; accent?: 'red' | 'orange'
+export function Kpi({ label, value, sub, accent, text }: {
+  label: string; value: ReactNode; sub?: ReactNode; accent?: 'red' | 'orange'; text?: boolean
 }) {
   return (
     <div className="card kpi">
       <div className="kpi-label">{label}</div>
-      <div className={`kpi-value ${accent ? `accent-${accent}` : ''}`}>{value}</div>
+      <div className={`kpi-value ${accent ? `accent-${accent}` : ''} ${text ? 'text' : ''}`}>{value}</div>
       {sub && <div className="kpi-sub">{sub}</div>}
     </div>
   )

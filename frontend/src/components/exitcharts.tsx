@@ -96,9 +96,6 @@ export function RelationGraph({ nodes, edges }: {
           )
         })}
       </svg>
-      <div className="typo-legend-12 text-grey" style={{ marginTop: 6 }}>
-        Толщина линии — в скольких интервью две проблемы названы вместе. Наведите на узел.
-      </div>
     </div>
   )
 }

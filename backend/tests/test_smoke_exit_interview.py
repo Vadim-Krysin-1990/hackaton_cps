@@ -90,6 +90,15 @@ def test_api_upload_and_dashboard(logged):
     dash = logged.get("/api/interviews/dashboard").json()
     assert dash["total"] >= 1 and dash["top_problem"]
 
+    g = logged.get("/api/interviews/graph").json()
+    kinds = {n["kind"] for n in g["nodes"]}
+    assert {"interview", "reason", "problem"} <= kinds and g["edges"]
+
+    ins = logged.get("/api/interviews/insight").json()
+    assert ins["ready"] and ins["engine"].startswith("fallback") and len(ins["recommendations"]) >= 3
+    # повторный вызов без новых интервью отдаёт кэш, а не строит заново
+    assert logged.get("/api/interviews/insight").json()["created_at"] == ins["created_at"]
+
     r = logged.get(f"/api/interviews/{iid}/docx")
     assert r.status_code == 200 and len(r.content) > 5000
 

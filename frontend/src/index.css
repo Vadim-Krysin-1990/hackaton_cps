@@ -68,7 +68,7 @@ a:hover { text-decoration: underline; }
   display: flex; align-items: center; gap: 20px; padding: 0 32px;
 }
 .page-header .sep { width: 1px; height: 32px; background: rgba(255,255,255,.3); flex-shrink: 0; }
-.page-header .ph-title { font-size: 18px; font-weight: 500; color: #fff; }
+.page-header .ph-title { font-size: 20px; font-weight: 500; color: #fff; line-height: 1; }
 .page-header .ph-sub { font-size: 12px; color: rgba(255,255,255,.7); margin-top: 2px; }
 .page-header .ph-user { margin-left: auto; text-align: right; color: #fff; }
 .page-header .ph-user .name { font-size: 14px; font-weight: 500; }
@@ -106,14 +106,16 @@ a:hover { text-decoration: underline; }
 .grid { display: grid; gap: var(--space-lg); }
 .cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.kpi-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-lg); }
+.kpi-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-lg); }
+.kpi-row.cols-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 @media (max-width: 1100px) {
   .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cols-2, .cols-3 { grid-template-columns: 1fr; }
 }
 
 .kpi .kpi-label { font-size: 12px; font-weight: 500; color: var(--color-text-grey); margin-bottom: 6px; }
-.kpi .kpi-value { font-size: 40px; font-weight: 300; line-height: 1.1; }
+.kpi .kpi-value { font-size: 40px; font-weight: 300; line-height: 1.1; overflow-wrap: anywhere; }
+.kpi .kpi-value.text { font-size: 22px; font-weight: 500; line-height: 1.25; }
 .kpi .kpi-sub { font-size: 12px; color: var(--color-text-grey); margin-top: 6px; }
 .kpi .accent-red { color: var(--color-error); }
 .kpi .accent-orange { color: #9a6a00; }

@@ -59,6 +59,7 @@ ACTION_LABELS = {
     "interview_view": "Просмотр паспорта",
     "interview_delete": "Удаление интервью",
     "interview_export": "Выгрузка паспорта",
+    "insight_build": "Вывод ИИ по всем интервью",
 }
 
 

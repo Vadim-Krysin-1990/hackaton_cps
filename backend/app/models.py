@@ -126,6 +126,19 @@ class ChatMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class Insight(Base):
+    """Вывод ИИ по всем интервью: что делать с главной проблемой. Кэшируется,
+    пересчитывается, когда добавились новые интервью или по кнопке."""
+    __tablename__ = "insights"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    interviews_count: Mapped[int] = mapped_column(Integer, default=0)
+    engine: Mapped[str] = mapped_column(String(64), default="")
+    payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 class Interview(Base):
     """Exit-интервью: исходный текст, паспорт проблемы и всё, что нужно, чтобы
     показать, откуда паспорт взялся (реплики, настроение, проверка цитат)."""
@@ -141,6 +154,8 @@ class Interview(Base):
     exit_reason: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     risk_zone: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
     top_problem: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    department: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    manager: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     engine: Mapped[str] = mapped_column(String(64), default="")
     passport: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     analysis: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # sentiment, verification, utterances, steps

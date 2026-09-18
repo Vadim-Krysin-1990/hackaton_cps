@@ -53,6 +53,8 @@ def _extract_json(raw: str) -> dict:
 def _normalize(p: dict) -> dict:
     """Приводит ответ модели к схеме: недостающее — пустое, лишнее — отбрасывается."""
     out = {
+        "department": str(p.get("department") or "").strip().strip(".«»\""),
+        "manager": str(p.get("manager") or "").strip().strip(".«»\""),
         "exit_reason": str(p.get("exit_reason") or "другое").strip().lower(),
         "exit_reason_quote": str(p.get("exit_reason_quote") or ""),
         "says": str(p.get("says") or ""),

@@ -91,8 +91,23 @@ DEFAULT_SUGGESTIONS = [
 ]
 
 
+_DEPT_RE = re.compile(r"(?:отдел[еа]?|подразделени[еи]|департамент[еа]?|служб[еа])\s*«?([^».,;\n]{3,40})", re.IGNORECASE)
+_MGR_RE = re.compile(r"(?:руководител[ьяем]+|начальник[а-я]*|под руководством)\s+([А-ЯЁ][а-яё]+(?:\s[А-ЯЁ][а-яё]+)?)")
+
+
+def find_entities(text: str) -> tuple[str, str]:
+    """Отдел и руководитель, если названы явно. Ничего не угадываем."""
+    d = _DEPT_RE.search(text)
+    m = _MGR_RE.search(text)
+    dept = d.group(1).strip() if d else ""
+    if d and d.group(0).lower().startswith(("отдел", "подразделени", "департамент", "служб")):
+        dept = d.group(0).strip(" «»")
+    return dept, (m.group(1).strip() if m else "")
+
+
 def analyze(source: str, utts: list[Utterance]) -> dict:
     emp = "\n".join(u.text for u in utts if u.speaker != "interviewer") or source
+    dept, mgr = find_entities(emp)
     sentences = _sentences(emp)
     low = emp.lower()
 
@@ -119,6 +134,8 @@ def analyze(source: str, utts: list[Utterance]) -> dict:
     risk = "High" if toxic >= 1 else "Medium" if pains and pains[0]["mentions"] >= 2 else "Low"
     top = pains[0]["category"] if pains else ""
     return {
+        "department": dept,
+        "manager": mgr,
         "exit_reason": reason,
         "exit_reason_quote": reason_quote,
         "says": "; ".join(p["label"] for p in pains[:3]) or "жалоб не выделено",

@@ -87,6 +87,8 @@ export function PassportCard({ item, onChange }: { item: InterviewFull; onChange
         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
           <span className="pill pill-blue">причина: {p.exit_reason}</span>
           {riskPill(p.risk_zone)}
+          {p.department && <span className="pill">{p.department}</span>}
+          {p.manager && <span className="pill">руководитель: {p.manager}</span>}
           <span className="pill">движок: {item.engine}</span>
           <span className="pill">{fmtSec(item.duration_ms)}</span>
         </div>
@@ -251,12 +253,13 @@ export default function Interviews() {
           <div className="empty">Интервью пока нет. Загрузите транскрипты на экране «Загрузка».</div>
         ) : (
           <table className="table">
-            <thead><tr><th>Файл</th><th style={{ width: 150 }}>Причина</th><th style={{ width: 110 }}>Риск</th>
-              <th style={{ width: 200 }}>Главная проблема</th><th>Вывод</th><th style={{ width: 90 }}>Время</th></tr></thead>
+            <thead><tr><th>Файл</th><th style={{ width: 170 }}>Отдел / руководитель</th><th style={{ width: 130 }}>Причина</th><th style={{ width: 100 }}>Риск</th>
+              <th style={{ width: 180 }}>Главная проблема</th><th>Вывод</th><th style={{ width: 80 }}>Время</th></tr></thead>
             <tbody>
               {data.items.map(r => (
                 <tr key={r.id} className="row-clickable" onClick={() => get<InterviewFull>(`/interviews/${r.id}`).then(setCard)}>
                   <td className="cell-main">{r.filename}<div className="cell-sub">{r.chars} симв. · {r.engine}</div></td>
+                  <td>{r.department || '—'}<div className="cell-sub">{r.manager || ''}</div></td>
                   <td>{r.exit_reason || '—'}</td>
                   <td>{riskPill(r.risk_zone)}</td>
                   <td>{r.top_problem || '—'}</td>

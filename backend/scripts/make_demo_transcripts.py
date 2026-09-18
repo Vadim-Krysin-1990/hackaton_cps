@@ -78,7 +78,13 @@ PRACTICES = [
     ("руководство", "Мой непосредственный руководитель всегда прикрывал и давал свободу в задачах."),
 ]
 
+DEPARTMENTS = ["отдел закупок", "отдел разработки", "отдел аналитики", "отдел сопровождения", "отдел продаж"]
+MANAGERS = ["Ивановой", "Петрова", "Сидорова", "Кузнецовой", "Смирнова"]
+# какие отделы и руководители чаще фигурируют — чтобы граф связей показывал сгущения
+DEPT_BY_SCENARIO = {"деньги": 0, "карьера": 1, "микроклимат": 2, "нереализованность": 1}
+
 QUESTIONS = [
+    "Для протокола: в каком отделе работали и кто руководитель?",
     "Расскажите, почему решили уйти?",
     "Что было самым сложным в работе?",
     "Что бы вы изменили в первую очередь?",
@@ -126,7 +132,10 @@ def make_transcript(rng: random.Random, scenario: str, plain: bool) -> str:
     practices = rng.sample(PRACTICES, k=2)
     toxic = rng.random() < 0.35
 
+    dept_i = DEPT_BY_SCENARIO[scenario] if rng.random() < 0.7 else rng.randrange(len(DEPARTMENTS))
+    mgr_i = dept_i if rng.random() < 0.8 else rng.randrange(len(MANAGERS))
     answers = [
+        f"Работал в подразделении «{DEPARTMENTS[dept_i]}», под руководством {MANAGERS[mgr_i]}.",
         rng.choice(s["reason"]) + " " + main_text,
         pains[1][1] + " " + pains[2][1],
         repeat + (" " + rng.choice(TOXIC) if toxic else ""),
@@ -148,9 +157,11 @@ def main() -> None:
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
     rng = random.Random(args.seed)
-    names = list(SCENARIOS)
+    # распределение причин намеренно неровное: как в жизни, деньги и карьера чаще
+    plan = ["деньги", "карьера", "деньги", "микроклимат", "карьера", "нереализованность",
+            "деньги", "карьера", "микроклимат", "деньги", "карьера", "нереализованность"]
     for i in range(args.count):
-        scenario = names[i % len(names)]
+        scenario = plan[i % len(plan)]
         text = make_transcript(rng, scenario, plain=(i % 4 == 3))
         (out / f"interview_{i + 1:02d}.txt").write_text(text, encoding="utf-8")
     print(f"Создано {args.count} транскриптов в {out}")

@@ -43,7 +43,7 @@ export default function Login() {
           <img src="/logo.svg" height={40} alt="" />
           <div>
             <div className="t">{health?.app_title || 'ИИ-помощник'}</div>
-            <div className="s">{health?.app_subtitle || ''}</div>
+            {health?.app_subtitle && <div className="s">{health.app_subtitle}</div>}
           </div>
         </div>
 
