@@ -248,11 +248,13 @@ def graph(db: Session = Depends(get_db), user: User = Depends(get_current_user))
     }
 
 
-def _insight_context(db: Session) -> tuple[str, int]:
-    """Сводка по всем паспортам — то, что видит модель. Только агрегаты и цитаты."""
+def _insight_context(db: Session, problem: str = "") -> tuple[str, int]:
+    """Сводка по всем паспортам — то, что видит модель. Только агрегаты и цитаты.
+    problem — категория, на которой нужно сосредоточиться: её цитаты идут первыми."""
     rows = db.query(Interview).filter(Interview.status == "done").all()
     if not rows:
         return "", 0
+    focus_quotes, focus_where = [], Counter()
     reasons, pains, depts, mgrs, risks = Counter(), Counter(), Counter(), Counter(), Counter()
     dept_reason, mgr_reason = Counter(), Counter()
     quotes = []
@@ -267,9 +269,15 @@ def _insight_context(db: Session) -> tuple[str, int]:
             mgrs[r.manager] += 1
             mgr_reason[(r.manager, p.get("exit_reason") or "другое")] += 1
         for pp in p.get("pain_points", []):
-            pains[pp.get("category") or "другое"] += 1
-            if pp.get("quotes") and len(quotes) < 12:
-                quotes.append(f"[{pp.get('category')}] «{pp['quotes'][0]}»")
+            cat = pp.get("category") or "другое"
+            pains[cat] += 1
+            if problem and cat == problem:
+                focus_where[(r.department or "отдел не указан", r.manager or "руководитель не указан")] += 1
+                for q in pp.get("quotes", [])[:2]:
+                    if len(focus_quotes) < 10:
+                        focus_quotes.append(f"«{q}»")
+            elif pp.get("quotes") and len(quotes) < 12:
+                quotes.append(f"[{cat}] «{pp['quotes'][0]}»")
     lines = [f"Интервью всего: {len(rows)}",
              "Причины ухода: " + ", ".join(f"{k} — {v}" for k, v in reasons.most_common()),
              "Системные проблемы (в скольких интервью): " + ", ".join(f"{k} — {v}" for k, v in pains.most_common()),
@@ -280,22 +288,27 @@ def _insight_context(db: Session) -> tuple[str, int]:
     if mgrs:
         lines.append("Руководители: " + ", ".join(f"{k} — {v}" for k, v in mgrs.most_common()))
         lines.append("Руководитель и причина: " + ", ".join(f"{m} / {r} — {v}" for (m, r), v in mgr_reason.most_common(8)))
-    lines.append("Характерные цитаты:\n" + "\n".join(quotes))
+    if problem:
+        lines.append(f"ФОКУС: проблема «{problem}» названа в {pains.get(problem, 0)} интервью из {len(rows)}. "
+                     "Где встречается (отдел / руководитель — сколько раз): "
+                     + (", ".join(f"{d} / {m} — {c}" for (d, m), c in focus_where.most_common(6)) or "нет данных"))
+        lines.append("Цитаты по этой проблеме:\n" + ("\n".join(focus_quotes) or "цитат нет"))
+    lines.append("Характерные цитаты по остальным проблемам:\n" + "\n".join(quotes))
     return "\n".join(lines), len(rows)
 
 
 def _insight_payload(i: Insight | None) -> dict:
     if i is None:
         return {"ready": False}
-    return {"ready": True, "interviews_count": i.interviews_count, "engine": i.engine,
+    return {"ready": True, "problem": i.problem, "interviews_count": i.interviews_count, "engine": i.engine,
             "duration_ms": i.duration_ms, "created_at": i.created_at.isoformat() if i.created_at else None,
             **(i.payload or {})}
 
 
-def _build_insight(db: Session, user: User, model: str | None) -> Insight:
+def _build_insight(db: Session, user: User, model: str | None, problem: str = "") -> Insight:
     from ..domain.exit_interview.pipeline import _extract_json, load_prompt
 
-    context, n = _insight_context(db)
+    context, n = _insight_context(db, problem)
     if not n:
         raise HTTPException(status_code=400, detail="Нет разобранных интервью — вывод строить не из чего")
     system = load_prompt("insight_system")
@@ -306,6 +319,8 @@ def _build_insight(db: Session, user: User, model: str | None) -> Insight:
         try:
             raw = llm_client.chat([{"role": "system", "content": system},
                                    {"role": "user", "content": "Сводка по интервью:\n\n" + context +
+                                    (f"\n\nРекомендации нужны ТОЛЬКО по проблеме «{problem}»: что с ней делать, "
+                                     "где она сконцентрирована, кто отвечает." if problem else "") +
                                     "\n\nВерни вывод для руководителя в формате JSON."}],
                                   temperature=0.2, max_tokens=2500, model=model, json_mode=True)
             data = _extract_json(raw)
@@ -323,28 +338,32 @@ def _build_insight(db: Session, user: User, model: str | None) -> Insight:
             payload = None
             engine = f"fallback ({type(e).__name__})"
     if payload is None:
+        from ..domain.exit_interview import fallback as fb
         dash = dashboard(db, user)
-        payload = {"headline": f"Главная проблема: {dash['top_problem'] or 'не выделена'}",
+        top = problem or dash["top_problem"] or ""
+        payload = {"headline": f"Проблема: {top or 'не выделена'}",
                    "summary": f"Разобрано {n} интервью. Модель недоступна, вывод собран из агрегатов.",
-                   "signals": [], "recommendations": [{"action": s, "owner": "HR", "effect": ""} for s in dash["top_suggestions"]]}
-    ins = Insight(interviews_count=n, engine=engine, payload=payload,
+                   "signals": [], "recommendations": [{"action": s, "owner": "HR", "effect": ""}
+                                                       for s in fb.SUGGESTIONS.get(top, fb.DEFAULT_SUGGESTIONS)]}
+    ins = Insight(problem=problem, interviews_count=n, engine=engine, payload=payload,
                   duration_ms=int((time.perf_counter() - t0) * 1000))
     db.add(ins)
     db.commit()
-    audit(db, user, "insight_build", {"interviews": n, "engine": engine}, duration_ms=ins.duration_ms)
+    audit(db, user, "insight_build", {"interviews": n, "engine": engine, "problem": problem}, duration_ms=ins.duration_ms)
     return ins
 
 
 @router.get("/insight")
-def insight(refresh: bool = False, model: str = "", db: Session = Depends(get_db),
+def insight(refresh: bool = False, model: str = "", problem: str = "", db: Session = Depends(get_db),
             user: User = Depends(get_current_user)):
-    """Вывод ИИ для дашборда. Пересобирается, если добавились интервью или по кнопке."""
+    """Вывод ИИ для дашборда: по главной проблеме или по выбранной (problem).
+    Кэш на каждую проблему свой; пересобирается, если добавились интервью или по кнопке."""
     n = db.query(func.count(Interview.id)).filter(Interview.status == "done").scalar() or 0
-    last = db.query(Insight).order_by(Insight.id.desc()).first()
+    last = db.query(Insight).filter(Insight.problem == problem).order_by(Insight.id.desc()).first()
     if n == 0:
         return {"ready": False}
     if refresh or last is None or last.interviews_count != n:
-        last = _build_insight(db, user, model or None)
+        last = _build_insight(db, user, model or None, problem)
     return _insight_payload(last)
 
 

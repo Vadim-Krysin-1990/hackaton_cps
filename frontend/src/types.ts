@@ -314,6 +314,7 @@ export interface GraphData {
 
 export interface Insight {
   ready: boolean
+  problem?: string
   interviews_count: number
   engine: string
   duration_ms: number

@@ -21,17 +21,21 @@ export default function Dashboard() {
   const [metrics, setMetrics] = useState<Metrics | null>(null)
   const [ins, setIns] = useState<Insight | null>(null)
   const [insBusy, setInsBusy] = useState(false)
+  const [problem, setProblem] = useState('')
 
-  const loadInsight = (refresh = false) => {
+  const loadInsight = (refresh = false, prob = problem) => {
     setInsBusy(true)
-    get<Insight>(`/interviews/insight${refresh ? '?refresh=true' : ''}`).then(setIns).catch(() => {}).finally(() => setInsBusy(false))
+    const params = new URLSearchParams()
+    if (refresh) params.set('refresh', 'true')
+    if (prob) params.set('problem', prob)
+    get<Insight>(`/interviews/insight?${params}`).then(setIns).catch(() => {}).finally(() => setInsBusy(false))
   }
 
   useEffect(() => {
     get<DashboardData>('/interviews/dashboard').then(setD).catch(() => {})
     get<Metrics>('/metrics').then(setMetrics).catch(() => {})
-    loadInsight()
   }, [])
+  useEffect(() => { loadInsight(false, problem) }, [problem])  // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!d) return <Spinner />
   const analyze = metrics?.operations.find(o => o.action === 'interview_analyze')
@@ -61,15 +65,21 @@ export default function Dashboard() {
           <div className="card mt-lg">
             <div className="row spread" style={{ flexWrap: 'wrap', gap: 8 }}>
               <div>
-                <h3 className="card-title" style={{ margin: 0 }}>Вывод ИИ: что делать с главной проблемой</h3>
+                <h3 className="card-title" style={{ margin: 0 }}>Вывод ИИ: что делать с проблемой</h3>
                 <div className="typo-legend-12 text-grey">
                   {ins?.ready ? `по ${ins.interviews_count} интервью · ${ins.engine} · обновлено ${fmtTime(ins.created_at)} · пересчитывается при новых интервью`
                               : insBusy ? 'модель формулирует вывод…' : 'вывод ещё не построен'}
                 </div>
               </div>
-              <button className="btn btn-secondary btn-sm" disabled={insBusy} onClick={() => loadInsight(true)}>
-                {insBusy ? 'Считаю…' : 'Пересчитать'}
-              </button>
+              <div className="row" style={{ gap: 8 }}>
+                <select className="input" value={problem} onChange={e => setProblem(e.target.value)} disabled={insBusy} style={{ minWidth: 240 }}>
+                  <option value="">Главная проблема{d.top_problem ? `: ${d.top_problem}` : ''}</option>
+                  {d.pains.map(p => <option key={p.name} value={p.name}>{p.name} ({p.count})</option>)}
+                </select>
+                <button className="btn btn-secondary btn-sm" disabled={insBusy} onClick={() => loadInsight(true)}>
+                  {insBusy ? 'Считаю…' : 'Пересчитать'}
+                </button>
+              </div>
             </div>
             {ins?.ready ? (
               <div className="mt-lg">

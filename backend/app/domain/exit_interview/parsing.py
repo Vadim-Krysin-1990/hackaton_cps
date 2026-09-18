@@ -57,11 +57,32 @@ def _split_plain(text: str) -> list[tuple[str, int, int]]:
     return parts
 
 
+_sentence_re = re.compile(r"[^.!?…]+[.!?…]+(?:\s*[»)])?|[^.!?…]+$")
+
+
+def _split_monologue(text: str) -> list[tuple[str, int, int]]:
+    """Сплошной монолог сотрудника без вопросов интервьюера: реплика = предложение,
+    чтобы график настроения показывал ход рассказа, а не одну точку."""
+    return [(m.group(0), m.start(), m.end()) for m in _sentence_re.finditer(text) if m.group(0).strip()]
+
+
 def split_utterances(text: str) -> list[Utterance]:
     lines = text.splitlines(keepends=True)
     labeled = sum(1 for ln in lines if _label_re.match(ln))
     result: list[Utterance] = []
     pos = 0
+    dialog_markers = ("..." in text) or ("…" in text and text.count("…") >= 2)
+    if labeled < 2 and not dialog_markers:
+        # монолог: всё говорит сотрудник; короткий вопрос в начале («Уходишь?») — интервьюер
+        for i, (chunk, start, end) in enumerate(_split_monologue(text)):
+            stripped = chunk.strip(" \n\t—–-")
+            lead = chunk.index(stripped) if stripped else 0
+            if not stripped:
+                continue
+            is_q = stripped.endswith("?") and len(stripped.split()) <= 3 and i == 0
+            result.append(Utterance(len(result), "interviewer" if is_q else "employee",
+                                    stripped, start + lead, start + lead + len(stripped)))
+        return result
     if labeled >= 2:
         for ln in lines:
             m = _label_re.match(ln)

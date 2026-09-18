@@ -132,6 +132,8 @@ class Insight(Base):
     __tablename__ = "insights"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    # пусто — вывод по главной проблеме; иначе категория, по которой просили рекомендации
+    problem: Mapped[str] = mapped_column(String(128), default="", index=True)
     interviews_count: Mapped[int] = mapped_column(Integer, default=0)
     engine: Mapped[str] = mapped_column(String(64), default="")
     payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
