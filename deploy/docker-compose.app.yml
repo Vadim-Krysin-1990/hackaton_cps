@@ -8,7 +8,7 @@ services:
     restart: unless-stopped
     environment:
       APP_SECRET_KEY: ${APP_SECRET_KEY:?задайте APP_SECRET_KEY в .env}
-      APP_TITLE: ${APP_TITLE:-Паспорт ухода}
+      APP_TITLE: ${APP_TITLE:-Цифровой аналитик экзит-интервью}
       APP_SUBTITLE: ${APP_SUBTITLE:-}
       APP_DATA_DIR: /data
       APP_LLM_BASE_URL: ${APP_LLM_BASE_URL:-https://ollama.com}
