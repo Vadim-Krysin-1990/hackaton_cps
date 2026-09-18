@@ -1,0 +1,5 @@
+✅ SSH-ключ настроен, вход работает без пароля
+✅ Порт SSH сменён (22 → 2222), старый закрыт
+✅ Вход по паролю отключён (PasswordAuthentication no, PermitRootLogin prohibit-password)
+✅ ufw активен, открыт только нужный порт
+✅ fail2ban работает, отслеживает sshd через journald
