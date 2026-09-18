@@ -1,6 +1,63 @@
-__pycache__/
-.venv/
+# --- Данные хакатона: НЕ коммитить ---
+# ТЗ и датасеты заказчика почти всегда конфиденциальны (напр. ЛЦТ, п. 7.3.5).
+data/raw/*
+data/interim/*
+data/processed/*
+data/external/*
+!data/**/.gitkeep
+*.xlsx
+*.csv
+*.parquet
+*.geojson
+*.shp
+*.gpkg
+*.zip
+*.gguf
+*.pt
+*.onnx
+!docs/**/*.csv
+
+# Сабмиты и артефакты моделей
+submissions/*
+!submissions/.gitkeep
+models/
+mlruns/
+artifacts/
+
+# Секреты
 .env
-node_modules/
-*.log
+.env.*
+!.env.example
+*.cookie
+.cookie
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+
+# Ноутбуки и IDE
+.ipynb_checkpoints/
+.vscode/
+.idea/
+
+# ОС и логи
 .DS_Store
+*.log
+logs/
+
+# --- Фронтенд ---
+frontend/node_modules/
+frontend/dist/
+
+# --- База и индексы заготовки ---
+data/*.db
+data/qdrant/

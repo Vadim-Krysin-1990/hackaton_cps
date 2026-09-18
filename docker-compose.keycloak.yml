@@ -1,0 +1,46 @@
+# Дополнение к docker-compose.yml: единый вход через Keycloak.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.keycloak.yml up -d --build
+#
+# Realm, клиент, три роли и три пользователя заводятся автоматически из
+# deploy/keycloak/realm-hackathon.json — руками в админке ничего настраивать
+# не нужно. Консоль администратора: http://localhost:8080 (admin/admin).
+#
+# Требования по безопасности на хакатонах закрываются именно так: вход, роли и
+# отзыв доступа живут в отдельном сервисе, а не в коде решения.
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    restart: unless-stopped
+    command: ["start-dev", "--import-realm", "--http-port=8080"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HEALTH_ENABLED: "true"
+      # Адрес, по которому браузер видит Keycloak. Меняйте на публичный адрес
+      # стенда — иначе issuer в токене не совпадёт и вход будет отклонён.
+      KC_HOSTNAME: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}
+      KC_HOSTNAME_STRICT: "false"
+    volumes:
+      - ./deploy/keycloak:/opt/keycloak/data/import:ro
+      - kcdata:/opt/keycloak/data
+    ports:
+      - "${KEYCLOAK_PORT:-8080}:8080"
+
+  api:
+    environment:
+      APP_OIDC_ENABLED: "true"
+      # issuer должен совпадать с тем, что видит браузер, а не контейнер
+      APP_OIDC_ISSUER: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}/realms/hackathon
+      APP_OIDC_CLIENT_ID: app
+      APP_OIDC_REDIRECT_URL: ${APP_PUBLIC_URL:-http://localhost}/api/auth/oidc/callback
+      APP_OIDC_POST_LOGOUT_URL: ${APP_PUBLIC_URL:-http://localhost}/login
+      # Запасной путь на случай, если Keycloak не поднимется на защите.
+      # Выключайте только когда уверены в стенде.
+      APP_LOCAL_LOGIN_ENABLED: ${APP_LOCAL_LOGIN_ENABLED:-true}
+    depends_on:
+      - keycloak
+
+volumes:
+  kcdata:

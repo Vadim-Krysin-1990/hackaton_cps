@@ -1,0 +1,82 @@
+{
+  "realm": "hackathon",
+  "enabled": true,
+  "displayName": "Хакатон",
+  "loginTheme": "keycloak",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "roles": {
+    "realm": [
+      { "name": "app-leader", "description": "Руководитель: полный просмотр" },
+      { "name": "app-expert", "description": "Профильный специалист" },
+      { "name": "app-analyst", "description": "Аналитик: базовый доступ" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "app",
+      "name": "Сервис хакатона",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:8000/*##http://localhost/*"
+      },
+      "redirectUris": [
+        "http://localhost:8000/api/auth/oidc/callback",
+        "http://localhost/api/auth/oidc/callback",
+        "http://127.0.0.1:8000/api/auth/oidc/callback"
+      ],
+      "webOrigins": ["+"],
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "ruk",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Демо",
+      "lastName": "Руководитель",
+      "email": "ruk@example.org",
+      "credentials": [{ "type": "password", "value": "demo2026", "temporary": false }],
+      "realmRoles": ["app-leader"]
+    },
+    {
+      "username": "exp",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Демо",
+      "lastName": "Специалист",
+      "email": "exp@example.org",
+      "credentials": [{ "type": "password", "value": "demo2026", "temporary": false }],
+      "realmRoles": ["app-expert"]
+    },
+    {
+      "username": "ana",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Демо",
+      "lastName": "Аналитик",
+      "email": "ana@example.org",
+      "credentials": [{ "type": "password", "value": "demo2026", "temporary": false }],
+      "realmRoles": ["app-analyst"]
+    }
+  ]
+}
