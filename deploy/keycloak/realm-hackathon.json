@@ -7,9 +7,18 @@
   "registrationAllowed": false,
   "roles": {
     "realm": [
-      { "name": "app-leader", "description": "Руководитель: полный просмотр" },
-      { "name": "app-expert", "description": "Профильный специалист" },
-      { "name": "app-analyst", "description": "Аналитик: базовый доступ" }
+      {
+        "name": "app-leader",
+        "description": "Руководитель: полный просмотр"
+      },
+      {
+        "name": "app-expert",
+        "description": "Профильный специалист"
+      },
+      {
+        "name": "app-analyst",
+        "description": "Аналитик: базовый доступ"
+      }
     ]
   },
   "clients": [
@@ -23,14 +32,18 @@
       "serviceAccountsEnabled": false,
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:8000/*##http://localhost/*"
+        "post.logout.redirect.uris": "http://localhost:8000/*##http://localhost:8010/*##http://localhost/*##http://127.0.0.1:8000/*##http://127.0.0.1:8010/*"
       },
       "redirectUris": [
-        "http://localhost:8000/api/auth/oidc/callback",
+        "http://127.0.0.1:8000/api/auth/oidc/callback",
+        "http://127.0.0.1:8010/api/auth/oidc/callback",
         "http://localhost/api/auth/oidc/callback",
-        "http://127.0.0.1:8000/api/auth/oidc/callback"
+        "http://localhost:8000/api/auth/oidc/callback",
+        "http://localhost:8010/api/auth/oidc/callback"
       ],
-      "webOrigins": ["+"],
+      "webOrigins": [
+        "+"
+      ],
       "protocolMappers": [
         {
           "name": "realm roles",
@@ -55,8 +68,16 @@
       "firstName": "Демо",
       "lastName": "Руководитель",
       "email": "ruk@example.org",
-      "credentials": [{ "type": "password", "value": "demo2026", "temporary": false }],
-      "realmRoles": ["app-leader"]
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo2026",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "app-leader"
+      ]
     },
     {
       "username": "exp",
@@ -65,8 +86,16 @@
       "firstName": "Демо",
       "lastName": "Специалист",
       "email": "exp@example.org",
-      "credentials": [{ "type": "password", "value": "demo2026", "temporary": false }],
-      "realmRoles": ["app-expert"]
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo2026",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "app-expert"
+      ]
     },
     {
       "username": "ana",
@@ -75,8 +104,16 @@
       "firstName": "Демо",
       "lastName": "Аналитик",
       "email": "ana@example.org",
-      "credentials": [{ "type": "password", "value": "demo2026", "temporary": false }],
-      "realmRoles": ["app-analyst"]
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo2026",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "app-analyst"
+      ]
     }
   ]
 }

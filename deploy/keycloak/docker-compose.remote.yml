@@ -1,0 +1,20 @@
+# Keycloak на отдельном сервере, без приложения. Запуск на сервере:
+#   cd /opt/keycloak && KEYCLOAK_PUBLIC_URL=http://<адрес сервера>:8080 docker compose -f docker-compose.remote.yml up -d
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    restart: unless-stopped
+    command: ["start-dev", "--import-realm", "--http-port=8080"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HEALTH_ENABLED: "true"
+      KC_HOSTNAME: ${KEYCLOAK_PUBLIC_URL:?задайте KEYCLOAK_PUBLIC_URL, например http://13.143.181.167:8080}
+      KC_HOSTNAME_STRICT: "false"
+    volumes:
+      - ./realm-hackathon.json:/opt/keycloak/data/import/realm-hackathon.json:ro
+      - kcdata:/opt/keycloak/data
+    ports:
+      - "8080:8080"
+volumes:
+  kcdata:
