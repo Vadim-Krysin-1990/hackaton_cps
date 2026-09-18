@@ -31,6 +31,12 @@ echo "[4/4] Запуск"
 cd "$DIR" && docker compose -f docker-compose.remote.yml up -d
 for i in $(seq 1 60); do
   if curl -fs "$PUBLIC_URL/realms/hackathon/.well-known/openid-configuration" >/dev/null 2>&1; then
+    # админка realm master по HTTP с внешнего адреса закрыта по умолчанию («HTTPS required»);
+    # для стенда снимаем требование, для боевого контура ставится TLS и режим start
+    docker compose -f docker-compose.remote.yml exec -T keycloak /opt/keycloak/bin/kcadm.sh config credentials \
+      --server http://localhost:8080 --realm master --user admin --password "$ADMIN_PASSWORD" >/dev/null 2>&1 \
+      && docker compose -f docker-compose.remote.yml exec -T keycloak /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE \
+      && echo "realm master: HTTPS не требуется (стенд)"
     echo "Keycloak готов: $PUBLIC_URL/realms/hackathon"
     echo "Админка: $PUBLIC_URL (admin / $ADMIN_PASSWORD). Пользователи realm: ruk, exp, ana, пароль demo2026"
     exit 0
