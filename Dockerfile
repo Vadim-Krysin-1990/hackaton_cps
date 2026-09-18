@@ -30,6 +30,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/app ./app
 COPY backend/scripts ./scripts
+# промпты лежат в корне проекта и читаются при каждом анализе
+COPY prompts /prompts
 COPY --from=web /web/dist /frontend/dist
 
 ENV APP_FRONTEND_DIST=/frontend/dist \
