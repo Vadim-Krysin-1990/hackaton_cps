@@ -100,6 +100,13 @@ docs/                                 постановка, разбор ТЗ, �
   подключается конфигурацией (`docker-compose.keycloak.yml`).
 * Лимиты на размер текста и расширения файлов, ошибки без трейсбеков.
 
+## Стенд
+
+Приложение: `http://13.143.181.167/` (Docker, `/opt/passport`, compose `deploy/docker-compose.app.yml`).
+Keycloak: `http://13.143.181.167:8080/` (`/opt/keycloak`). Модель: облако Ollama, gpt-oss:20b.
+Обновление стенда: скопировать исходники в `/opt/passport` и выполнить
+`docker compose --env-file .env -f deploy/docker-compose.app.yml up -d --build`.
+
 ## Единый вход через Keycloak
 
 Keycloak живёт на отдельном сервере, приложению нужен только адрес realm. Развёртывание
