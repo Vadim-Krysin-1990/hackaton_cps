@@ -1,8 +1,10 @@
-# Демо-контур: приложение + Ollama. База — SQLite, вектора — встроенный Qdrant,
-# всё лежит в ./data. Запуск:
+# Демо-контур: приложение + Ollama. База — SQLite, всё лежит в ./data. Запуск:
 #
 #   cp .env.example .env && docker compose up -d --build
-#   docker compose exec ollama ollama pull qwen2.5:7b-instruct
+#   docker compose exec ollama ollama pull gpt-oss:20b      # для локальной модели
+#
+# Для облака Ollama в .env: APP_LLM_BASE_URL=https://ollama.com и APP_LLM_API_KEY,
+# сервис ollama тогда можно не запускать: docker compose up -d --build api
 #
 # Интерфейс: http://<адрес>/ — вход демо-пользователем из backend/app/seed.py.
 
@@ -16,10 +18,11 @@ services:
       APP_SUBTITLE: ${APP_SUBTITLE:-демонстрационный контур}
       APP_DATA_DIR: /data
       APP_LLM_BASE_URL: ${APP_LLM_BASE_URL:-http://ollama:11434}
-      APP_LLM_MODEL: ${APP_LLM_MODEL:-qwen2.5:7b-instruct}
+      APP_LLM_MODEL: ${APP_LLM_MODEL:-gpt-oss:20b}
       APP_LLM_API_KEY: ${APP_LLM_API_KEY:-}
+      APP_LLM_MODELS: ${APP_LLM_MODELS:-}
       APP_DEMO_PASSWORD: ${APP_DEMO_PASSWORD:-demo2026}
-      APP_BASELINE_MANUAL_MINUTES: ${APP_BASELINE_MANUAL_MINUTES:-120}
+      APP_BASELINE_MANUAL_MINUTES: ${APP_BASELINE_MANUAL_MINUTES:-40}
     volumes:
       - ./data:/data
       - models:/models
