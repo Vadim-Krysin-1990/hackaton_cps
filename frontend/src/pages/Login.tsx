@@ -83,8 +83,8 @@ export default function Login() {
           {/* Демо-доступ задаётся в backend/app/seed.py и в realm Keycloak.
               Перед сдачей сверьте подсказку с реальностью. */}
           <div className="login-hint">
-            Демо-доступ: <b>ruk</b> (руководитель), <b>exp</b> (специалист), <b>ana</b> (аналитик) —
-            пароль <b>demo2026</b>
+            Демо-доступ: <b>marina</b> (HR-партнёр), <b>ruk</b> (руководитель), <b>exp</b> (специалист),
+            <b>ana</b> (аналитик) — пароль <b>demo2026</b>
           </div>
         </div>
       </div>
