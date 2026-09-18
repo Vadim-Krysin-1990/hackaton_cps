@@ -99,7 +99,7 @@ def _llm_passport(transcript: str, hints: dict, model: str | None = None,
     messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
     last_error = ""
     for attempt in range(1, attempts + 1):
-        raw = client.chat(messages, temperature=0.1, max_tokens=1800, model=model)
+        raw = client.chat(messages, temperature=0.1, max_tokens=3000, model=model, json_mode=True)
         try:
             data = _extract_json(raw)
             missing = [k for k in REQUIRED if k not in data]

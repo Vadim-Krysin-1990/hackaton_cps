@@ -70,6 +70,9 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_provider: str = ""  # "" = автодетект, иначе openai|ollama
     llm_timeout: int = 180
+    # Список моделей для переключателя в интерфейсе (через запятую). Пусто —
+    # берётся то, что отдаёт провайдер; в облаке там есть и платные модели.
+    llm_models: str = ""
 
     # --- Метрика «было/стало»: сколько минут задача занимает у человека вручную ---
     baseline_manual_minutes: int = 120

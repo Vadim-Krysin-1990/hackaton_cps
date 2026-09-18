@@ -74,17 +74,38 @@ def _auth_headers() -> dict:
 
 
 def chat(messages: list[dict], temperature: float = 0.2, max_tokens: int = 2000,
-         model: str | None = None) -> str:
+         model: str | None = None, json_mode: bool = False) -> str:
     """model — переопределение модели на один вызов: переключатель в интерфейсе
-    позволяет прогнать один и тот же текст через разные модели Ollama."""
+    позволяет прогнать один и тот же текст через разные модели Ollama.
+    json_mode — просим провайдера вернуть строго JSON (Ollama format=json,
+    OpenAI response_format); рассуждающим моделям ограничиваем размышления."""
     model = model or settings.llm_model
     if provider() == "ollama":
-        return _chat_ollama(messages, temperature, max_tokens, model)
-    return _chat_openai(messages, temperature, max_tokens, model)
+        return _chat_ollama(messages, temperature, max_tokens, model, json_mode)
+    return _chat_openai(messages, temperature, max_tokens, model, json_mode)
+
+
+# Рассуждающие модели тратят лимит токенов на размышления: просим думать коротко.
+_THINKING_PREFIXES = ("gpt-oss", "deepseek-r", "qwq", "qwen3", "nemotron", "glm", "kimi", "minimax")
+
+
+def _think_option(model: str):
+    low = model.lower()
+    if low.startswith("gpt-oss"):
+        return "low"
+    if any(low.startswith(p) for p in _THINKING_PREFIXES):
+        return False
+    return None
 
 
 def list_models() -> list[str]:
-    """Модели, доступные у провайдера. Для Ollama — то, что скачано локально."""
+    """Модели для переключателя: APP_LLM_MODELS, иначе список провайдера
+    (для локальной Ollama — то, что скачано)."""
+    if settings.llm_models.strip():
+        names = [m.strip() for m in settings.llm_models.split(",") if m.strip()]
+        if settings.llm_model not in names:
+            names.insert(0, settings.llm_model)
+        return names
     try:
         if provider() == "ollama":
             base = settings.llm_base_url.rstrip("/").removesuffix("/v1")
@@ -103,16 +124,22 @@ def list_models() -> list[str]:
     return names
 
 
-def _chat_ollama(messages, temperature, max_tokens, model) -> str:
+def _chat_ollama(messages, temperature, max_tokens, model, json_mode=False) -> str:
     base = settings.llm_base_url.rstrip("/").removesuffix("/v1")
+    body = {
+        "model": model,
+        "messages": messages,
+        "stream": False,
+        "options": {"temperature": temperature, "num_predict": max_tokens},
+    }
+    if json_mode:
+        body["format"] = "json"
+    think = _think_option(model)
+    if think is not None:
+        body["think"] = think
     resp = requests.post(
         f"{base}/api/chat",
-        json={
-            "model": model,
-            "messages": messages,
-            "stream": False,
-            "options": {"temperature": temperature, "num_predict": max_tokens},
-        },
+        json=body,
         headers=_auth_headers(),
         timeout=settings.llm_timeout,
     )
@@ -120,15 +147,18 @@ def _chat_ollama(messages, temperature, max_tokens, model) -> str:
     return resp.json()["message"]["content"]
 
 
-def _chat_openai(messages, temperature, max_tokens, model) -> str:
+def _chat_openai(messages, temperature, max_tokens, model, json_mode=False) -> str:
+    body = {
+        "model": model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    if json_mode:
+        body["response_format"] = {"type": "json_object"}
     resp = requests.post(
         f"{settings.llm_base_url.rstrip('/')}/chat/completions",
-        json={
-            "model": model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        },
+        json=body,
         headers={"Content-Type": "application/json", **_auth_headers()},
         timeout=settings.llm_timeout,
     )
