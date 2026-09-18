@@ -25,7 +25,7 @@ cd frontend && npm install && npm run build && cd ..
 APP_SECRET_KEY=dev uvicorn app.main:app --app-dir backend --port 8000
 ```
 
-Вход: `ana` / `demo2026` (роли `ruk`, `exp`, `ana`).
+Вход: `ana` / `demo2026`; демо-пользователи `ruk` (руководитель), `exp` (специалист), `ana` (аналитик), `marina` (HR-партнёр), пароль у всех demo2026.
 Демонстрационные транскрипты: `data/samples/transcripts/*.txt` (синтетика, реальных бесед нет).
 
 ```bash
@@ -110,7 +110,7 @@ bash deploy/keycloak/push-remote.sh root@<адрес сервера> 2222
 ```
 
 Скрипт ставит Docker, если его нет, поднимает Keycloak 26 с готовым realm `hackathon`
-(клиент `app`, роли `app-leader`, `app-expert`, `app-analyst`, пользователи `ruk`, `exp`, `ana`)
+(клиент `app`, роли `app-leader`, `app-expert`, `app-analyst`, пользователи `ruk`, `exp`, `ana`, `marina`)
 и открывает порт 8080. В `.env` приложения: `APP_OIDC_ENABLED=true`,
 `APP_OIDC_ISSUER=http://<адрес сервера>:8080/realms/hackathon`. Локальный вход остаётся
 запасным путём. Для боевого контура: режим `start` с TLS вместо `start-dev`.

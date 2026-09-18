@@ -114,6 +114,24 @@
       "realmRoles": [
         "app-analyst"
       ]
+    },
+    {
+      "username": "marina",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Марина",
+      "lastName": "Соколова",
+      "email": "marina@example.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo2026",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "app-expert"
+      ]
     }
   ]
 }

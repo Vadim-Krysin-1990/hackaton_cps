@@ -38,7 +38,7 @@ for i in $(seq 1 60); do
       && docker compose -f docker-compose.remote.yml exec -T keycloak /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE \
       && echo "realm master: HTTPS не требуется (стенд)"
     echo "Keycloak готов: $PUBLIC_URL/realms/hackathon"
-    echo "Админка: $PUBLIC_URL (admin / $ADMIN_PASSWORD). Пользователи realm: ruk, exp, ana, пароль demo2026"
+    echo "Админка: $PUBLIC_URL (admin / $ADMIN_PASSWORD). Пользователи realm: ruk, exp, ana, marina, пароль demo2026"
     exit 0
   fi
   sleep 3
